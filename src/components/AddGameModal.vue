@@ -6,12 +6,21 @@ import VirtualKeyboard from "./VirtualKeyboard.vue";
 import { useGamepad } from "../composables/useGamepad";
 import type { CustomGame } from "../types/game";
 
+const props = defineProps<{
+  mode: "add" | "edit";
+  editData?: CustomGame | null;
+}>();
+
 const emit = defineEmits<{
   close: [];
   added: [game: CustomGame];
+  updated: [game: CustomGame];
 }>();
 
+const isEdit = computed(() => props.mode === "edit");
+
 const form = reactive({
+  id: "",
   title: "",
   executable: "",
   coverImage: "",
@@ -34,14 +43,26 @@ async function submit() {
   form.submitting = true;
   form.error = "";
   try {
-    const game = await invoke<CustomGame>("add_game", {
-      title: form.title.trim(),
-      executable: form.executable.trim(),
-      coverImage: form.coverImage.trim() || null,
-      tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-      notes: form.notes.trim() || null,
-    });
-    emit("added", game);
+    if (isEdit.value) {
+      const game = await invoke<CustomGame>("edit_game", {
+        id: form.id,
+        title: form.title.trim(),
+        executable: form.executable.trim(),
+        coverImage: form.coverImage.trim() || null,
+        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        notes: form.notes.trim() || null,
+      });
+      emit("updated", game);
+    } else {
+      const game = await invoke<CustomGame>("add_game", {
+        title: form.title.trim(),
+        executable: form.executable.trim(),
+        coverImage: form.coverImage.trim() || null,
+        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+        notes: form.notes.trim() || null,
+      });
+      emit("added", game);
+    }
   } catch (e) {
     form.error = String(e);
   } finally {
@@ -49,36 +70,12 @@ async function submit() {
   }
 }
 
-function onExplorerSelect(path: string) {
-  if (explorerMode.value === "executable") {
-    form.executable = path;
-  } else if (explorerMode.value === "cover") {
-    form.coverImage = path;
-  }
-  explorerMode.value = null;
-}
-
-function onBackdropMouseDown(e: MouseEvent) {
-  mouseDownOnOverlay.value = e.target === e.currentTarget;
-}
-
-function onBackdropMouseUp(e: MouseEvent) {
-  if (mouseDownOnOverlay.value && e.target === e.currentTarget) emit("close");
-}
-
 // ── Form controller navigation ─────────────────────────────────────────────
 
 // Indices map to the visual top-to-bottom order of focusable elements
 const FORM_ITEMS = [
-  "title",
-  "executable",
-  "browse-executable",
-  "coverImage",
-  "browse-cover",
-  "tags",
-  "notes",
-  "cancel",
-  "submit",
+  "title", "executable", "browse-executable", "coverImage", "browse-cover",
+  "tags", "notes", "cancel", "submit"
 ] as const;
 const formFocusedIndex = ref(0);
 const formInputActive = ref(false);
@@ -99,7 +96,8 @@ function blurActiveInput() {
 }
 
 function activateFormItem() {
-  switch (FORM_ITEMS[formFocusedIndex.value]) {
+  const item = FORM_ITEMS[formFocusedIndex.value];
+  switch (item) {
     case "title":
       formInputActive.value = true;
       titleRef.value?.focus();
@@ -208,8 +206,33 @@ function onVirtualKeyboardConfirm() {
   virtualKeyboardTarget.value = null;
 }
 
+function onExplorerSelect(path: string) {
+  if (explorerMode.value === "executable") {
+    form.executable = path;
+  } else if (explorerMode.value === "cover") {
+    form.coverImage = path;
+  }
+  explorerMode.value = null;
+}
+
+function onBackdropMouseDown(e: MouseEvent) {
+  mouseDownOnOverlay.value = e.target === e.currentTarget;
+}
+
+function onBackdropMouseUp(e: MouseEvent) {
+  if (mouseDownOnOverlay.value && e.target === e.currentTarget) emit("close");
+}
+
 onMounted(() => {
   window.addEventListener("keydown", onKeyDown);
+  if (props.editData) {
+    form.id = props.editData.id;
+    form.title = props.editData.title;
+    form.executable = props.editData.executable;
+    form.coverImage = props.editData.cover_image || "";
+    form.tags = props.editData.tags.join(", ");
+    form.notes = props.editData.notes || "";
+  }
 });
 
 onUnmounted(() => {
@@ -226,7 +249,7 @@ onUnmounted(() => {
     <div class="w-full max-w-md bg-zinc-950 rounded-lg shadow-2xl border border-zinc-800 p-5">
 
       <div class="flex items-center justify-between mb-5">
-        <h2 class="text-white text-sm font-semibold">Add Custom Game</h2>
+        <h2 class="text-white text-sm font-semibold">{{ isEdit ? "Edit Game" : "Add Custom Game" }}</h2>
         <button
           @click="emit('close')"
           class="text-zinc-500 hover:text-white transition-colors"
@@ -253,8 +276,8 @@ onUnmounted(() => {
             class="w-full px-3 py-1.5 bg-zinc-900 text-white text-sm rounded-md border border-zinc-800
                    focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600
                    placeholder-zinc-600 transition-colors"
-            :class="formFocusedIndex === 0 ? 'ring-2 ring-zinc-500' : ''"
-            @focus="formInputActive = true; formFocusedIndex = 0"
+            :class="FORM_ITEMS[formFocusedIndex] === 'title' ? 'ring-2 ring-zinc-500' : ''"
+            @focus="formInputActive = true; formFocusedIndex = FORM_ITEMS.indexOf('title')"
             @blur="formInputActive = false"
           />
         </div>
@@ -273,8 +296,8 @@ onUnmounted(() => {
               class="flex-1 min-w-0 px-3 py-1.5 bg-zinc-900 text-white text-sm rounded-md border border-zinc-800
                      focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600
                      placeholder-zinc-600 transition-colors"
-              :class="formFocusedIndex === 1 ? 'ring-2 ring-zinc-500' : ''"
-              @focus="formInputActive = true; formFocusedIndex = 1"
+            :class="FORM_ITEMS[formFocusedIndex] === 'executable' ? 'ring-2 ring-zinc-500' : ''"
+            @focus="formInputActive = true; formFocusedIndex = FORM_ITEMS.indexOf('executable')"
               @blur="formInputActive = false"
             />
             <button
@@ -283,7 +306,7 @@ onUnmounted(() => {
               @click="explorerMode = 'executable'"
               class="shrink-0 px-3 py-1.5 text-sm rounded-md border border-zinc-700
                      text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
-              :class="formFocusedIndex === 2 ? 'ring-2 ring-zinc-500' : ''"
+              :class="FORM_ITEMS[formFocusedIndex] === 'browse-executable' ? 'ring-2 ring-zinc-500' : ''"
               title="Browse"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -306,8 +329,8 @@ onUnmounted(() => {
               class="flex-1 min-w-0 px-3 py-1.5 bg-zinc-900 text-white text-sm rounded-md border border-zinc-800
                      focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600
                      placeholder-zinc-600 transition-colors"
-              :class="formFocusedIndex === 3 ? 'ring-2 ring-zinc-500' : ''"
-              @focus="formInputActive = true; formFocusedIndex = 3"
+              :class="FORM_ITEMS[formFocusedIndex] === 'coverImage' ? 'ring-2 ring-zinc-500' : ''"
+              @focus="formInputActive = true; formFocusedIndex = FORM_ITEMS.indexOf('coverImage')"
               @blur="formInputActive = false"
             />
             <button
@@ -316,7 +339,7 @@ onUnmounted(() => {
               @click="explorerMode = 'cover'"
               class="shrink-0 px-3 py-1.5 text-sm rounded-md border border-zinc-700
                      text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
-              :class="formFocusedIndex === 4 ? 'ring-2 ring-zinc-500' : ''"
+              :class="FORM_ITEMS[formFocusedIndex] === 'browse-cover' ? 'ring-2 ring-zinc-500' : ''"
               title="Browse"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -339,8 +362,8 @@ onUnmounted(() => {
             class="w-full px-3 py-1.5 bg-zinc-900 text-white text-sm rounded-md border border-zinc-800
                    focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600
                    placeholder-zinc-600 transition-colors"
-            :class="formFocusedIndex === 5 ? 'ring-2 ring-zinc-500' : ''"
-            @focus="formInputActive = true; formFocusedIndex = 5"
+            :class="FORM_ITEMS[formFocusedIndex] === 'tags' ? 'ring-2 ring-zinc-500' : ''"
+            @focus="formInputActive = true; formFocusedIndex = FORM_ITEMS.indexOf('tags')"
             @blur="formInputActive = false"
           />
         </div>
@@ -356,8 +379,8 @@ onUnmounted(() => {
             class="w-full px-3 py-1.5 bg-zinc-900 text-white text-sm rounded-md border border-zinc-800
                    focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600
                    placeholder-zinc-600 resize-none transition-colors"
-            :class="formFocusedIndex === 6 ? 'ring-2 ring-zinc-500' : ''"
-            @focus="formInputActive = true; formFocusedIndex = 6"
+            :class="FORM_ITEMS[formFocusedIndex] === 'notes' ? 'ring-2 ring-zinc-500' : ''"
+            @focus="formInputActive = true; formFocusedIndex = FORM_ITEMS.indexOf('notes')"
             @blur="formInputActive = false"
           />
         </div>
@@ -371,7 +394,7 @@ onUnmounted(() => {
             @click="emit('close')"
             class="px-4 py-1.5 text-sm text-zinc-400 hover:text-white rounded-md
                    border border-zinc-700 hover:bg-zinc-800 transition-colors"
-            :class="formFocusedIndex === 7 ? 'ring-2 ring-zinc-500' : ''"
+            :class="FORM_ITEMS[formFocusedIndex] === 'cancel' ? 'ring-2 ring-zinc-500' : ''"
           >
             Cancel
           </button>
@@ -382,9 +405,9 @@ onUnmounted(() => {
             class="px-4 py-1.5 text-sm font-medium bg-white text-zinc-950
                    rounded-md hover:bg-zinc-100 transition-colors
                    disabled:opacity-40 disabled:cursor-not-allowed"
-            :class="formFocusedIndex === 8 ? 'ring-2 ring-zinc-500 ring-offset-1 ring-offset-zinc-950' : ''"
+            :class="FORM_ITEMS[formFocusedIndex] === 'submit' ? 'ring-2 ring-zinc-500 ring-offset-1 ring-offset-zinc-950' : ''"
           >
-            {{ form.submitting ? "Adding…" : "Add Game" }}
+            {{ form.submitting ? (isEdit ? "Saving…" : "Adding…") : (isEdit ? "Save Changes" : "Add Game") }}
           </button>
         </div>
       </form>

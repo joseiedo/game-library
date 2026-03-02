@@ -10,6 +10,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   launch: [game: Game];
+  edit: [game: Game];
+  delete: [game: Game];
   "update:focusedIndex": [index: number];
 }>();
 
@@ -38,6 +40,8 @@ watch(() => props.focusedIndex, async (idx) => {
       :game="game"
       :focused="i === props.focusedIndex"
       @launch="emit('launch', game)"
+      @edit="emit('edit', game)"
+      @delete="emit('delete', game)"
       @focus="emit('update:focusedIndex', i)"
     />
   </div>

@@ -82,7 +82,11 @@ impl Library {
             .position(|g| g.id == id)
             .ok_or_else(|| LibraryError::NotFound(id.to_string()))?;
         let removed = self.games.remove(index);
-        log::info!("Removed game from library: {:?} (id={})", removed.title, removed.id);
+        log::info!(
+            "Removed game from library: {:?} (id={})",
+            removed.title,
+            removed.id
+        );
         self.persist()?;
         Ok(removed)
     }

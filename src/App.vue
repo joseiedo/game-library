@@ -23,10 +23,14 @@ import {
 // ── State ──────────────────────────────────────────────────────────────────
 
 const allGames = ref<Game[]>([]);
+const customGamesData = ref<CustomGame[]>([]);
 const loading = ref(true);
 const loadError = ref("");
 const showAddModal = ref(false);
+const showEditModal = ref(false);
+const editingGame = ref<CustomGame | null>(null);
 const pendingLaunch = ref<Game | null>(null);
+const pendingDelete = ref<CustomGame | null>(null);
 const focusedIndex = ref(0);
 const notification = ref<{ message: string; type: "error" | "info" } | null>(null);
 let notificationTimer = 0;
@@ -85,6 +89,7 @@ async function loadGames() {
       ...epicGames.map(fromEpicGame),
       ...customGames.map(fromCustomGame),
     ];
+    customGamesData.value = customGames;
     info(`Library loaded: ${steamGames.length} Steam game(s), ${epicGames.length} Epic game(s), ${customGames.length} custom game(s)`);
   } catch (e) {
     logError(`Failed to load library: ${e}`);
@@ -161,7 +166,65 @@ function cancelLaunch() {
 function onGameAdded(custom: CustomGame) {
   info(`Custom game added: "${custom.title}" (id=${custom.id})`);
   allGames.value.push(fromCustomGame(custom));
+  customGamesData.value.push(custom);
   showAddModal.value = false;
+}
+
+function onGameUpdated(custom: CustomGame) {
+  info(`Custom game updated: "${custom.title}" (id=${custom.id})`);
+  const index = allGames.value.findIndex((g) => g.key === `custom-${custom.id}`);
+  if (index !== -1) {
+    allGames.value[index] = fromCustomGame(custom);
+  }
+  const dataIndex = customGamesData.value.findIndex((g) => g.id === custom.id);
+  if (dataIndex !== -1) {
+    customGamesData.value[dataIndex] = custom;
+  }
+  showEditModal.value = false;
+  editingGame.value = null;
+}
+
+function requestEditGame(game: Game) {
+  if (game.platform !== "custom") return;
+  const id = game.key.replace("custom-", "");
+  const customData = customGamesData.value.find((g) => g.id === id);
+  if (customData) {
+    editingGame.value = customData;
+    showEditModal.value = true;
+  }
+}
+
+function requestDeleteGame(game: Game) {
+  if (game.platform !== "custom") return;
+  const id = game.key.replace("custom-", "");
+  const customData = customGamesData.value.find((g) => g.id === id);
+  if (customData) {
+    pendingDelete.value = customData;
+  }
+}
+
+function confirmDeleteGame() {
+  if (pendingDelete.value) {
+    invoke("remove_game", { id: pendingDelete.value.id })
+      .then(() => {
+        info(`Custom game deleted: id=${pendingDelete.value?.id}`);
+        allGames.value = allGames.value.filter(
+          (g) => g.key !== `custom-${pendingDelete.value?.id}`
+        );
+        customGamesData.value = customGamesData.value.filter(
+          (g) => g.id !== pendingDelete.value?.id
+        );
+        showEditModal.value = false;
+        editingGame.value = null;
+      })
+      .catch((e) => {
+        logError(`Failed to delete game: ${e}`);
+        showNotification(`Failed to delete game: ${e}`);
+      })
+      .finally(() => {
+        pendingDelete.value = null;
+      });
+  }
 }
 
 // ── Sidebar navigation ─────────────────────────────────────────────────────
@@ -394,6 +457,8 @@ onUnmounted(() => {
           :games="filteredGames"
           :focused-index="focusedIndex"
           @launch="requestLaunch"
+          @edit="requestEditGame"
+          @delete="requestDeleteGame"
           @update:focused-index="focusedIndex = $event"
         />
       </template>
@@ -401,8 +466,18 @@ onUnmounted(() => {
 
     <AddGameModal
       v-if="showAddModal"
+      mode="add"
       @close="showAddModal = false"
       @added="onGameAdded"
+    />
+
+    <AddGameModal
+      v-if="showEditModal"
+      mode="edit"
+      :edit-data="editingGame"
+      @close="showEditModal = false; editingGame = null"
+      @updated="onGameUpdated"
+      @request-delete="pendingDelete = editingGame"
     />
 
     <LaunchConfirmDialog
@@ -411,6 +486,37 @@ onUnmounted(() => {
       @confirm="confirmLaunch"
       @cancel="cancelLaunch"
     />
+
+    <!-- Delete Confirmation Dialog -->
+    <div
+      v-if="pendingDelete"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      @click.self="pendingDelete = null"
+    >
+      <div class="w-full max-w-sm bg-zinc-950 rounded-lg shadow-2xl border border-zinc-800 p-5">
+        <h3 class="text-white text-sm font-semibold mb-2">Delete Game?</h3>
+        <p class="text-zinc-400 text-sm mb-4">
+          Are you sure you want to delete "{{ pendingDelete?.title }}"?
+          This action cannot be undone.
+        </p>
+        <div class="flex justify-end gap-2">
+          <button
+            @click="pendingDelete = null"
+            class="px-4 py-1.5 text-sm text-zinc-400 hover:text-white rounded-md
+                   border border-zinc-700 hover:bg-zinc-800 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            @click="confirmDeleteGame"
+            class="px-4 py-1.5 text-sm font-medium bg-red-600 text-white
+                   rounded-md hover:bg-red-500 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
 
     <VirtualKeyboard
       v-if="searchKeyboardOpen"

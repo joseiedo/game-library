@@ -132,6 +132,37 @@ fn remove_game(state: State<AppState>, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn edit_game(
+    state: State<AppState>,
+    id: String,
+    title: String,
+    executable: String,
+    cover_image: Option<String>,
+    tags: Vec<String>,
+    notes: Option<String>,
+) -> Result<CustomGame, String> {
+    log::info!("Editing custom game: id={} title={:?}", id, title);
+    let updated = CustomGame {
+        id,
+        title,
+        executable: PathBuf::from(executable),
+        cover_image: cover_image.map(PathBuf::from),
+        tags,
+        notes,
+    };
+    state
+        .library
+        .lock()
+        .unwrap()
+        .update(updated)
+        .map(|g| g.clone())
+        .map_err(|e| {
+            log::error!("Failed to edit game: {}", e);
+            e.to_string()
+        })
+}
+
+#[tauri::command]
 fn launch_game(
     _state: State<AppState>,
     _key: String,
@@ -217,6 +248,7 @@ pub fn run() {
             get_epic_games,
             get_custom_games,
             add_game,
+            edit_game,
             remove_game,
             launch_game,
             list_directory,

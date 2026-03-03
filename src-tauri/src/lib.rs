@@ -4,6 +4,7 @@ mod launcher;
 mod library;
 mod settings;
 mod steam;
+mod updater;
 
 use epic::EpicGame;
 use launcher::LaunchTarget;
@@ -340,6 +341,7 @@ pub fn run() {
             get_ignored_games,
             add_ignored_game,
             remove_ignored_game,
+            updater::download_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

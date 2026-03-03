@@ -2,15 +2,18 @@ mod epic;
 mod fs_explorer;
 mod launcher;
 mod library;
+mod settings;
 mod steam;
 
 use epic::EpicGame;
 use launcher::LaunchTarget;
 use library::{CustomGame, Library};
+use settings::Settings;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use steam::SteamGame;
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_autostart::ManagerExt;
 
 // ---------------------------------------------------------------------------
 // Shared state
@@ -18,6 +21,7 @@ use tauri::{AppHandle, Manager, State};
 
 struct AppState {
     library: Mutex<Library>,
+    settings: Mutex<Settings>,
 }
 
 fn library_path(app: &AppHandle) -> PathBuf {
@@ -25,6 +29,13 @@ fn library_path(app: &AppHandle) -> PathBuf {
         .app_data_dir()
         .expect("could not resolve app data dir")
         .join("custom_games.json")
+}
+
+fn settings_path(app: &AppHandle) -> PathBuf {
+    app.path()
+        .app_data_dir()
+        .expect("could not resolve app data dir")
+        .join("settings.json")
 }
 
 // ---------------------------------------------------------------------------
@@ -202,6 +213,63 @@ fn launch_game(
 }
 
 // ---------------------------------------------------------------------------
+// Ignored games commands
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+fn get_ignored_games(state: State<AppState>) -> Vec<String> {
+    state
+        .settings
+        .lock()
+        .unwrap()
+        .ignored_game_keys()
+        .iter()
+        .cloned()
+        .collect()
+}
+
+#[tauri::command]
+fn add_ignored_game(state: State<AppState>, key: String) -> Result<(), String> {
+    log::info!("Ignoring game: {}", key);
+    state
+        .settings
+        .lock()
+        .unwrap()
+        .add_ignored(key)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn remove_ignored_game(state: State<AppState>, key: String) -> Result<(), String> {
+    log::info!("Unignoring game: {}", key);
+    state
+        .settings
+        .lock()
+        .unwrap()
+        .remove_ignored(&key)
+        .map_err(|e| e.to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Autostart commands
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+fn get_autostart(app: AppHandle) -> Result<bool, String> {
+    app.autolaunch().is_enabled().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
+    let al = app.autolaunch();
+    if enabled {
+        al.enable().map_err(|e| e.to_string())
+    } else {
+        al.disable().map_err(|e| e.to_string())
+    }
+}
+
+// ---------------------------------------------------------------------------
 // File-explorer commands
 // ---------------------------------------------------------------------------
 
@@ -233,13 +301,27 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .setup(|app| {
-            let path = library_path(app.handle());
-            log::info!("Loading custom game library from {:?}", path);
-            let library = Library::load(path).expect("failed to load game library");
+            let lib_path = library_path(app.handle());
+            log::info!("Loading custom game library from {:?}", lib_path);
+            let library = Library::load(lib_path).expect("failed to load game library");
             log::info!("Library ready: {} custom game(s)", library.games().len());
+
+            let set_path = settings_path(app.handle());
+            log::info!("Loading app settings from {:?}", set_path);
+            let app_settings = Settings::load(set_path).expect("failed to load settings");
+            log::info!(
+                "Settings ready: {} ignored game(s)",
+                app_settings.ignored_game_keys().len()
+            );
+
             app.manage(AppState {
                 library: Mutex::new(library),
+                settings: Mutex::new(app_settings),
             });
             Ok(())
         })
@@ -253,6 +335,11 @@ pub fn run() {
             launch_game,
             list_directory,
             get_file_explorer_bookmarks,
+            get_autostart,
+            set_autostart,
+            get_ignored_games,
+            add_ignored_game,
+            remove_ignored_game,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

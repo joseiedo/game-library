@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { info, warn, error as logError } from "@tauri-apps/plugin-log";
 import Sidebar from "./components/Sidebar.vue";
 import GameGrid from "./components/GameGrid.vue";
+import SettingsView from "./components/SettingsView.vue";
+import IgnorePickerModal from "./components/IgnorePickerModal.vue";
 import AddGameModal from "./components/AddGameModal.vue";
 import LaunchConfirmDialog from "./components/LaunchConfirmDialog.vue";
 import VirtualKeyboard from "./components/VirtualKeyboard.vue";
@@ -21,6 +23,11 @@ import {
 } from "./types/game";
 
 // ── State ──────────────────────────────────────────────────────────────────
+
+const activeTab = ref<"library" | "settings">("library");
+const autostartEnabled = ref(false);
+const ignoredKeys = ref<Set<string>>(new Set());
+const showIgnorePicker = ref(false);
 
 const allGames = ref<Game[]>([]);
 const customGamesData = ref<CustomGame[]>([]);
@@ -47,7 +54,7 @@ const sortOption = ref<SortOption>("alpha");
 
 // ── Sidebar focus state ────────────────────────────────────────────────────
 
-const focusArea = ref<"grid" | "sidebar">("grid");
+const focusArea = ref<"grid" | "sidebar" | "settings">("grid");
 const sidebarFocusedIndex = ref(0);
 const sidebarInputActive = ref(false);
 const sidebarRef = ref<InstanceType<typeof Sidebar>>();
@@ -62,8 +69,33 @@ const SIDEBAR_ITEMS = [
   "filter-custom",
   "sort",
   "add-game",
+  "settings",
 ] as const;
 type SidebarItem = (typeof SIDEBAR_ITEMS)[number];
+
+const settingsFocusedIndex = ref(0);
+
+// Ignored games that still exist in allGames (shown in settings list).
+const ignoredGamesInfo = computed(() =>
+  allGames.value
+    .filter((g) => ignoredKeys.value.has(g.key))
+    .map((g) => ({ key: g.key, title: g.title, platform: g.platform as string })),
+);
+
+// Games the user can still add to the ignore list.
+const availableForIgnore = computed(() =>
+  allGames.value.filter((g) => !ignoredKeys.value.has(g.key)),
+);
+
+// Settings rows: 0=autostart, 1..n=ignored game rows, n+1=add button
+const settingsItemCount = computed(() => 2 + ignoredGamesInfo.value.length);
+
+// Keep focus in bounds when ignored-games list changes length.
+watch(settingsItemCount, (count) => {
+  if (settingsFocusedIndex.value >= count) {
+    settingsFocusedIndex.value = Math.max(count - 1, 0);
+  }
+});
 
 // ── Data loading ───────────────────────────────────────────────────────────
 
@@ -99,14 +131,73 @@ async function loadGames() {
   }
 }
 
+// ── Autostart ──────────────────────────────────────────────────────────────
+
+async function loadAutostart() {
+  try {
+    autostartEnabled.value = await invoke<boolean>("get_autostart");
+  } catch (e) {
+    warn(`Could not read autostart state: ${e}`);
+  }
+}
+
+async function toggleAutostart() {
+  const next = !autostartEnabled.value;
+  try {
+    await invoke("set_autostart", { enabled: next });
+    autostartEnabled.value = next;
+    info(`Autostart ${next ? "enabled" : "disabled"}`);
+  } catch (e) {
+    logError(`Failed to set autostart: ${e}`);
+    showNotification(String(e));
+  }
+}
+
+// ── Ignored games ──────────────────────────────────────────────────────────
+
+async function loadIgnoredGames() {
+  try {
+    const keys = await invoke<string[]>("get_ignored_games");
+    ignoredKeys.value = new Set(keys);
+    info(`Ignored games loaded: ${keys.length} key(s)`);
+  } catch (e) {
+    warn(`Could not load ignored games: ${e}`);
+  }
+}
+
+async function addIgnoredGame(key: string) {
+  try {
+    await invoke("add_ignored_game", { key });
+    ignoredKeys.value = new Set([...ignoredKeys.value, key]);
+    info(`Game ignored: ${key}`);
+  } catch (e) {
+    logError(`Failed to ignore game: ${e}`);
+    showNotification(String(e));
+  }
+}
+
+async function removeIgnoredGame(key: string) {
+  try {
+    await invoke("remove_ignored_game", { key });
+    const next = new Set(ignoredKeys.value);
+    next.delete(key);
+    ignoredKeys.value = next;
+    info(`Game unignored: ${key}`);
+  } catch (e) {
+    logError(`Failed to unignore game: ${e}`);
+    showNotification(String(e));
+  }
+}
+
 // ── Filtered & sorted view ─────────────────────────────────────────────────
 
-const steamCount = computed(() => allGames.value.filter((g) => g.platform === "steam").length);
-const epicCount = computed(() => allGames.value.filter((g) => g.platform === "epic").length);
-const customCount = computed(() => allGames.value.filter((g) => g.platform === "custom").length);
+const visibleGames = computed(() => allGames.value.filter((g) => !ignoredKeys.value.has(g.key)));
+const steamCount = computed(() => visibleGames.value.filter((g) => g.platform === "steam").length);
+const epicCount = computed(() => visibleGames.value.filter((g) => g.platform === "epic").length);
+const customCount = computed(() => visibleGames.value.filter((g) => g.platform === "custom").length);
 
 const filteredGames = computed<Game[]>(() => {
-  let result = allGames.value;
+  let result = visibleGames.value;
 
   if (platformFilter.value !== "all") {
     result = result.filter((g) => g.platform === platformFilter.value);
@@ -233,31 +324,84 @@ function activateSidebarItem() {
   const item: SidebarItem = SIDEBAR_ITEMS[sidebarFocusedIndex.value];
   switch (item) {
     case "search":
+      switchToLibrary();
       searchKeyboardOpen.value = true;
       break;
     case "filter-all":
+      switchToLibrary();
       platformFilter.value = "all";
       focusedIndex.value = 0;
       break;
     case "filter-steam":
+      switchToLibrary();
       platformFilter.value = "steam";
       focusedIndex.value = 0;
       break;
     case "filter-epic":
+      switchToLibrary();
       platformFilter.value = "epic";
       focusedIndex.value = 0;
       break;
     case "filter-custom":
+      switchToLibrary();
       platformFilter.value = "custom";
       focusedIndex.value = 0;
       break;
     case "sort":
+      switchToLibrary();
       sortOption.value = sortOption.value === "alpha" ? "recentlyAdded" : "alpha";
       break;
     case "add-game":
       showAddModal.value = true;
       break;
+    case "settings":
+      openSettings();
+      break;
   }
+}
+
+function navigateSettings(action: GamepadAction) {
+  const itemCount = settingsItemCount.value;
+  switch (action) {
+    case "up":
+      settingsFocusedIndex.value = Math.max(settingsFocusedIndex.value - 1, 0);
+      break;
+    case "down":
+      settingsFocusedIndex.value = Math.min(settingsFocusedIndex.value + 1, itemCount - 1);
+      break;
+    case "a":
+      if (settingsFocusedIndex.value === 0) {
+        toggleAutostart();
+      } else if (settingsFocusedIndex.value === itemCount - 1) {
+        showIgnorePicker.value = true;
+      } else {
+        // Ignored game row — unignore it
+        const game = ignoredGamesInfo.value[settingsFocusedIndex.value - 1];
+        if (game) removeIgnoredGame(game.key);
+      }
+      break;
+    case "b":
+      activeTab.value = "library";
+      focusArea.value = "grid";
+      break;
+    case "left":
+      activeTab.value = "library";
+      focusArea.value = "sidebar";
+      sidebarFocusedIndex.value = SIDEBAR_ITEMS.indexOf("settings");
+      break;
+  }
+}
+
+function openSettings() {
+  activeTab.value = "settings";
+  focusArea.value = "settings";
+  settingsFocusedIndex.value = 0;
+  sidebarFocusedIndex.value = SIDEBAR_ITEMS.indexOf("settings");
+}
+
+function switchToLibrary() {
+  activeTab.value = "library";
+  focusArea.value = "grid";
 }
 
 function navigateSidebar(action: GamepadAction) {
@@ -276,13 +420,13 @@ function navigateSidebar(action: GamepadAction) {
       sidebarFocusedIndex.value = Math.min(sidebarFocusedIndex.value + 1, SIDEBAR_ITEMS.length - 1);
       break;
     case "right":
-      focusArea.value = "grid";
+      focusArea.value = activeTab.value === "settings" ? "settings" : "grid";
       break;
     case "a":
       activateSidebarItem();
       break;
     case "b":
-      focusArea.value = "grid";
+      focusArea.value = activeTab.value === "settings" ? "settings" : "grid";
       break;
   }
 }
@@ -329,6 +473,17 @@ function onKeyDown(e: KeyboardEvent) {
   if (pendingLaunch.value) return;
   if (showAddModal.value) return;
 
+  if (focusArea.value === "settings") {
+    switch (e.key) {
+      case "ArrowDown":  e.preventDefault(); navigateSettings("down");  break;
+      case "ArrowUp":    e.preventDefault(); navigateSettings("up");    break;
+      case "ArrowLeft":  e.preventDefault(); navigateSettings("left");  break;
+      case "Enter":      e.preventDefault(); navigateSettings("a");     break;
+      case "Escape":     navigateSettings("b"); break;
+    }
+    return;
+  }
+
   if (focusArea.value === "sidebar") {
     if (sidebarInputActive.value) {
       if (e.key === "Escape") {
@@ -363,12 +518,15 @@ const gamepadEnabled = computed(
   () =>
     !showAddModal.value &&
     !searchKeyboardOpen.value &&
+    !showIgnorePicker.value &&
     pendingLaunch.value === null
 );
 
 useGamepad((action) => {
   if (focusArea.value === "sidebar") {
     navigateSidebar(action);
+  } else if (focusArea.value === "settings") {
+    navigateSettings(action);
   } else {
     navigateGrid(action);
   }
@@ -378,6 +536,8 @@ useGamepad((action) => {
 
 onMounted(() => {
   loadGames();
+  loadAutostart();
+  loadIgnoredGames();
   window.addEventListener("keydown", onKeyDown);
 });
 
@@ -393,15 +553,16 @@ onUnmounted(() => {
       :search="search"
       :platform-filter="platformFilter"
       :sort-option="sortOption"
-      :total-games="allGames.length"
+      :total-games="visibleGames.length"
       :steam-count="steamCount"
       :epic-count="epicCount"
       :custom-count="customCount"
-      :sidebar-focused-index="focusArea === 'sidebar' ? sidebarFocusedIndex : -1"
-      @update:search="search = $event; focusedIndex = 0"
-      @update:platform-filter="platformFilter = $event; focusedIndex = 0"
-      @update:sort-option="sortOption = $event"
+      :sidebar-focused-index="focusArea === 'sidebar' || activeTab === 'settings' ? sidebarFocusedIndex : -1"
+      @update:search="search = $event; focusedIndex = 0; switchToLibrary()"
+      @update:platform-filter="platformFilter = $event; focusedIndex = 0; switchToLibrary()"
+      @update:sort-option="sortOption = $event; switchToLibrary()"
       @add-game="showAddModal = true"
+      @open-settings="openSettings"
       @input-blur="sidebarInputActive = false"
     />
 
@@ -443,6 +604,17 @@ onUnmounted(() => {
           Retry
         </button>
       </div>
+
+      <!-- Settings view -->
+      <SettingsView
+        v-else-if="activeTab === 'settings'"
+        :autostart-enabled="autostartEnabled"
+        :ignored-games="ignoredGamesInfo"
+        :focused-index="focusArea === 'settings' ? settingsFocusedIndex : -1"
+        @toggle-autostart="toggleAutostart"
+        @remove-ignored="removeIgnoredGame"
+        @open-ignore-picker="showIgnorePicker = true"
+      />
 
       <!-- Library header + grid -->
       <template v-else>
@@ -523,6 +695,13 @@ onUnmounted(() => {
       :model-value="search"
       @update:model-value="search = $event; focusedIndex = 0"
       @confirm="searchKeyboardOpen = false"
+    />
+
+    <IgnorePickerModal
+      v-if="showIgnorePicker"
+      :games="availableForIgnore"
+      @ignore="addIgnoredGame"
+      @close="showIgnorePicker = false"
     />
   </div>
 </template>

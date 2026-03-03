@@ -28,5 +28,6 @@ keyvalues-parser = "0.2"
 thiserror = "1"
 sysinfo = "0.33"
 tauri-plugin-log = "2"
+tauri-plugin-autostart = "2"
 log = "0.4"
 

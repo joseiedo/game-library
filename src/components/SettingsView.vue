@@ -8,6 +8,7 @@ export interface IgnoredGameInfo {
 defineProps<{
   autostartEnabled: boolean;
   ignoredGames: IgnoredGameInfo[];
+  checkingForUpdates: boolean;
   /**
    * Controller focus index across all settings rows:
    *   -1                      = no focus (sidebar is focused)
@@ -123,17 +124,26 @@ const PLATFORM_LABEL: Record<string, string> = {
       <p class="text-xs text-zinc-500 font-medium uppercase tracking-wider">Updates</p>
 
       <button
-        class="flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors w-fit"
+        class="flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors w-fit disabled:opacity-50 disabled:cursor-not-allowed"
         :class="focusedIndex === ignoredGames.length + 2
           ? 'border-zinc-500 ring-2 ring-zinc-500 text-zinc-200 bg-zinc-900'
           : 'border-zinc-700 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'"
+        :disabled="checkingForUpdates"
         @click="emit('checkForUpdates')"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg
+          v-if="checkingForUpdates"
+          class="w-3.5 h-3.5 animate-spin"
+          xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+        >
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
         </svg>
-        Check for updates
+        {{ checkingForUpdates ? 'Checking…' : 'Check for updates' }}
       </button>
     </div>
 

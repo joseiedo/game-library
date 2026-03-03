@@ -28,6 +28,7 @@ import {
 
 const showUpdateModal = ref(false);
 const updateInfo = ref<{ version: string; assetUrl: string; releaseUrl: string } | null>(null);
+const checkingForUpdates = ref(false);
 
 const activeTab = ref<"library" | "settings">("library");
 const autostartEnabled = ref(false);
@@ -576,7 +577,9 @@ function detectOS(): { os: string; arch: string } {
   return { os: "linux", arch: "x86_64" };
 }
 
-async function checkForUpdates() {
+async function checkForUpdates(silent = false) {
+  if (checkingForUpdates.value) return;
+  checkingForUpdates.value = true;
   try {
     const currentVersion = await getVersion();
     const { os, arch: cpuArch } = detectOS();
@@ -584,10 +587,16 @@ async function checkForUpdates() {
       "https://api.github.com/repos/joseiedo/game-library/releases/latest",
       { headers: { Accept: "application/vnd.github+json" } },
     );
-    if (!res.ok) return;
+    if (!res.ok) {
+      showNotification("Could not reach update server.", "error");
+      return;
+    }
     const data = await res.json();
     const remoteVersion = ((data.tag_name as string) ?? "").replace(/^v/, "");
-    if (!isNewerVersion(remoteVersion, currentVersion)) return;
+    if (!isNewerVersion(remoteVersion, currentVersion)) {
+      if (!silent) showNotification("You're up to date!", "info");
+      return;
+    }
 
     const assetUrl = findAssetUrl(data.assets ?? [], os, cpuArch);
     updateInfo.value = {
@@ -597,7 +606,9 @@ async function checkForUpdates() {
     };
     showUpdateModal.value = true;
   } catch {
-    // network error — silently ignore
+    showNotification("Update check failed. Check your connection.", "error");
+  } finally {
+    checkingForUpdates.value = false;
   }
 }
 
@@ -607,7 +618,7 @@ onMounted(() => {
   loadGames();
   loadAutostart();
   loadIgnoredGames();
-  checkForUpdates();
+  checkForUpdates(true);
   window.addEventListener("keydown", onKeyDown);
 });
 
@@ -681,6 +692,7 @@ onUnmounted(() => {
         :autostart-enabled="autostartEnabled"
         :ignored-games="ignoredGamesInfo"
         :focused-index="focusArea === 'settings' ? settingsFocusedIndex : -1"
+        :checking-for-updates="checkingForUpdates"
         @toggle-autostart="toggleAutostart"
         @remove-ignored="removeIgnoredGame"
         @open-ignore-picker="showIgnorePicker = true"

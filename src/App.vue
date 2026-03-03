@@ -3,7 +3,6 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { info, warn, error as logError } from "@tauri-apps/plugin-log";
 import { getVersion } from "@tauri-apps/api/app";
-import { platform, arch } from "@tauri-apps/api/os";
 import Sidebar from "./components/Sidebar.vue";
 import GameGrid from "./components/GameGrid.vue";
 import SettingsView from "./components/SettingsView.vue";
@@ -570,13 +569,17 @@ function isNewerVersion(remote: string, current: string): boolean {
   return ra !== ca ? ra > ca : rb !== cb ? rb > cb : rc > cc;
 }
 
+function detectOS(): { os: string; arch: string } {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("win")) return { os: "windows", arch: "x86_64" };
+  if (ua.includes("mac")) return { os: "macos", arch: "aarch64" };
+  return { os: "linux", arch: "x86_64" };
+}
+
 async function checkForUpdates() {
   try {
-    const [currentVersion, os, cpuArch] = await Promise.all([
-      getVersion(),
-      platform(),
-      arch(),
-    ]);
+    const currentVersion = await getVersion();
+    const { os, arch: cpuArch } = detectOS();
     const res = await fetch(
       "https://api.github.com/repos/joseiedo/game-library/releases/latest",
       { headers: { Accept: "application/vnd.github+json" } },

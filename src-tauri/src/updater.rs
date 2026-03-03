@@ -1,10 +1,10 @@
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 /// Downloads a release asset to the user's Downloads directory.
 /// Returns the absolute path to the saved file.
 #[tauri::command]
 pub async fn download_update(app: AppHandle, asset_url: String) -> Result<String, String> {
-    let download_dir = app.path().download_dir().map_err(|e| e.to_string())?;
+    let download_dir = app.path().download_dir().map_err(|e: tauri::Error| e.to_string())?;
 
     let filename = asset_url
         .rsplit('/')

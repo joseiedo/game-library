@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-opener";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { useGamepad } from "../composables/useGamepad";
 
 const props = defineProps<{
@@ -30,7 +30,7 @@ async function startDownload() {
 }
 
 async function openInstaller() {
-  await open(downloadedPath.value);
+  await openPath(downloadedPath.value);
   emit("dismiss");
 }
 

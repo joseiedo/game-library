@@ -22,6 +22,7 @@ const emit = defineEmits<{
   toggleAutostart: [];
   removeIgnored: [key: string];
   openIgnorePicker: [];
+  checkForUpdates: [];
 }>();
 
 const PLATFORM_LABEL: Record<string, string> = {
@@ -114,6 +115,25 @@ const PLATFORM_LABEL: Record<string, string> = {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
         Add game to ignore list
+      </button>
+    </div>
+
+    <!-- Updates section -->
+    <div class="flex flex-col gap-3 mt-8">
+      <p class="text-xs text-zinc-500 font-medium uppercase tracking-wider">Updates</p>
+
+      <button
+        class="flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors w-fit"
+        :class="focusedIndex === ignoredGames.length + 2
+          ? 'border-zinc-500 ring-2 ring-zinc-500 text-zinc-200 bg-zinc-900'
+          : 'border-zinc-700 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'"
+        @click="emit('checkForUpdates')"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        Check for updates
       </button>
     </div>
 

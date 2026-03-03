@@ -2,6 +2,8 @@
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { info, warn, error as logError } from "@tauri-apps/plugin-log";
+import { getVersion } from "@tauri-apps/api/app";
+import { platform, arch } from "@tauri-apps/api/os";
 import Sidebar from "./components/Sidebar.vue";
 import GameGrid from "./components/GameGrid.vue";
 import SettingsView from "./components/SettingsView.vue";
@@ -9,6 +11,7 @@ import IgnorePickerModal from "./components/IgnorePickerModal.vue";
 import AddGameModal from "./components/AddGameModal.vue";
 import LaunchConfirmDialog from "./components/LaunchConfirmDialog.vue";
 import VirtualKeyboard from "./components/VirtualKeyboard.vue";
+import UpdateAvailableModal from "./components/UpdateAvailableModal.vue";
 import { useGamepad, type GamepadAction } from "./composables/useGamepad";
 import {
   fromSteamGame,
@@ -23,6 +26,9 @@ import {
 } from "./types/game";
 
 // ── State ──────────────────────────────────────────────────────────────────
+
+const showUpdateModal = ref(false);
+const updateInfo = ref<{ version: string; assetUrl: string; releaseUrl: string } | null>(null);
 
 const activeTab = ref<"library" | "settings">("library");
 const autostartEnabled = ref(false);
@@ -87,8 +93,8 @@ const availableForIgnore = computed(() =>
   allGames.value.filter((g) => !ignoredKeys.value.has(g.key)),
 );
 
-// Settings rows: 0=autostart, 1..n=ignored game rows, n+1=add button
-const settingsItemCount = computed(() => 2 + ignoredGamesInfo.value.length);
+// Settings rows: 0=autostart, 1..n=ignored game rows, n+1=add button, n+2=check-for-updates
+const settingsItemCount = computed(() => 3 + ignoredGamesInfo.value.length);
 
 // Keep focus in bounds when ignored-games list changes length.
 watch(settingsItemCount, (count) => {
@@ -372,8 +378,10 @@ function navigateSettings(action: GamepadAction) {
     case "a":
       if (settingsFocusedIndex.value === 0) {
         toggleAutostart();
-      } else if (settingsFocusedIndex.value === itemCount - 1) {
+      } else if (settingsFocusedIndex.value === itemCount - 2) {
         showIgnorePicker.value = true;
+      } else if (settingsFocusedIndex.value === itemCount - 1) {
+        checkForUpdates();
       } else {
         // Ignored game row — unignore it
         const game = ignoredGamesInfo.value[settingsFocusedIndex.value - 1];
@@ -516,6 +524,7 @@ function onKeyDown(e: KeyboardEvent) {
 
 const gamepadEnabled = computed(
   () =>
+    !showUpdateModal.value &&
     !showAddModal.value &&
     !searchKeyboardOpen.value &&
     !showIgnorePicker.value &&
@@ -532,12 +541,70 @@ useGamepad((action) => {
   }
 }, { enabled: gamepadEnabled });
 
+// ── Update check ───────────────────────────────────────────────────────────
+
+function findAssetUrl(
+  assets: Array<{ name: string; browser_download_url: string }>,
+  os: string,
+  cpuArch: string,
+): string | null {
+  const candidates: string[] = [];
+  if (os === "macos") {
+    candidates.push(cpuArch === "aarch64" ? "_aarch64.dmg" : "_x86_64.dmg", "_universal.dmg");
+  } else if (os === "windows") {
+    candidates.push("_x64-setup.exe", "_x64-setup.msi");
+  } else if (os === "linux") {
+    candidates.push("_amd64.AppImage");
+  }
+  for (const suffix of candidates) {
+    const asset = assets.find((a) => a.name.includes(suffix));
+    if (asset) return asset.browser_download_url;
+  }
+  return null;
+}
+
+function isNewerVersion(remote: string, current: string): boolean {
+  const parse = (v: string) => v.split(".").map(Number);
+  const [ra, rb, rc = 0] = parse(remote);
+  const [ca, cb, cc = 0] = parse(current);
+  return ra !== ca ? ra > ca : rb !== cb ? rb > cb : rc > cc;
+}
+
+async function checkForUpdates() {
+  try {
+    const [currentVersion, os, cpuArch] = await Promise.all([
+      getVersion(),
+      platform(),
+      arch(),
+    ]);
+    const res = await fetch(
+      "https://api.github.com/repos/joseiedo/game-library/releases/latest",
+      { headers: { Accept: "application/vnd.github+json" } },
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    const remoteVersion = ((data.tag_name as string) ?? "").replace(/^v/, "");
+    if (!isNewerVersion(remoteVersion, currentVersion)) return;
+
+    const assetUrl = findAssetUrl(data.assets ?? [], os, cpuArch);
+    updateInfo.value = {
+      version: remoteVersion,
+      assetUrl: assetUrl ?? "",
+      releaseUrl: data.html_url ?? "https://github.com/joseiedo/game-library/releases",
+    };
+    showUpdateModal.value = true;
+  } catch {
+    // network error — silently ignore
+  }
+}
+
 // ── Lifecycle ──────────────────────────────────────────────────────────────
 
 onMounted(() => {
   loadGames();
   loadAutostart();
   loadIgnoredGames();
+  checkForUpdates();
   window.addEventListener("keydown", onKeyDown);
 });
 
@@ -614,6 +681,7 @@ onUnmounted(() => {
         @toggle-autostart="toggleAutostart"
         @remove-ignored="removeIgnoredGame"
         @open-ignore-picker="showIgnorePicker = true"
+        @check-for-updates="checkForUpdates"
       />
 
       <!-- Library header + grid -->
@@ -702,6 +770,14 @@ onUnmounted(() => {
       :games="availableForIgnore"
       @ignore="addIgnoredGame"
       @close="showIgnorePicker = false"
+    />
+
+    <UpdateAvailableModal
+      v-if="showUpdateModal && updateInfo && updateInfo.assetUrl"
+      :version="updateInfo.version"
+      :asset-url="updateInfo.assetUrl"
+      :release-url="updateInfo.releaseUrl"
+      @dismiss="showUpdateModal = false; updateInfo = null"
     />
   </div>
 </template>

@@ -30,4 +30,5 @@ sysinfo = "0.33"
 tauri-plugin-log = "2"
 tauri-plugin-autostart = "2"
 log = "0.4"
+reqwest = { version = "0.12", features = ["rustls-tls"] }
 

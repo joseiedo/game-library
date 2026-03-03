@@ -41,19 +41,19 @@ defineExpose({ focusSearch, focusSort, blurActive });
 </script>
 
 <template>
-  <aside class="w-52 shrink-0 flex flex-col gap-5 py-5 px-3 bg-zinc-950 border-r border-zinc-800">
+  <aside class="w-52 shrink-0 flex flex-col gap-5 py-5 px-3 bg-zinc-100 border-r border-zinc-200 dark:bg-zinc-950 dark:border-zinc-800 transition-colors duration-200">
     <!-- Logo -->
     <div class="flex items-center gap-2 px-2 py-1">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
           d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
       </svg>
-      <span class="text-sm font-semibold text-white tracking-tight">Game Library</span>
+      <span class="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight">Game Library</span>
     </div>
 
     <!-- Search -->
     <div class="relative">
-      <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-500 pointer-events-none"
+      <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 pointer-events-none"
         fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
@@ -65,15 +65,15 @@ defineExpose({ focusSearch, focusSort, blurActive });
         :value="search"
         @input="emit('update:search', ($event.target as HTMLInputElement).value)"
         @blur="emit('inputBlur')"
-        class="w-full pl-8 pr-3 py-1.5 text-sm bg-zinc-900 text-white placeholder-zinc-500
-               rounded-md border border-zinc-800 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-colors"
-        :class="sidebarFocusedIndex === 0 ? 'ring-2 ring-zinc-500' : ''"
+        class="w-full pl-8 pr-3 py-1.5 text-sm bg-white text-zinc-900 placeholder-zinc-400 dark:bg-zinc-900 dark:text-white dark:placeholder-zinc-500
+               rounded-md border border-zinc-200 dark:border-zinc-800 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 transition-colors"
+        :class="sidebarFocusedIndex === 0 ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
       />
     </div>
 
     <!-- Platform filter -->
     <div class="flex flex-col gap-0.5">
-      <p class="text-xs text-zinc-500 px-2 mb-1 font-medium">Platform</p>
+      <p class="text-xs text-zinc-500 dark:text-zinc-500 px-2 mb-1 font-medium">Platform</p>
 
       <button
         v-for="(opt, idx) in ([
@@ -87,30 +87,30 @@ defineExpose({ focusSearch, focusSort, blurActive });
         class="flex items-center justify-between w-full px-2 py-1.5 rounded-md text-sm transition-colors"
         :class="[
           platformFilter === opt.value
-            ? 'bg-zinc-800 text-white font-medium'
-            : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200',
-          sidebarFocusedIndex === idx + 1 ? 'ring-2 ring-zinc-500' : ''
+            ? 'bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:text-white font-medium'
+            : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-200',
+          sidebarFocusedIndex === idx + 1 ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''
         ]"
       >
         <span>{{ opt.label }}</span>
-        <span class="text-xs text-zinc-600">{{ opt.count }}</span>
+        <span class="text-xs text-zinc-400 dark:text-zinc-600">{{ opt.count }}</span>
       </button>
     </div>
 
     <!-- Sort -->
     <div class="flex flex-col gap-1.5">
-      <p class="text-xs text-zinc-500 px-2 font-medium">Sort by</p>
+      <p class="text-xs text-zinc-500 dark:text-zinc-500 px-2 font-medium">Sort by</p>
       <div
         class="rounded-md"
-        :class="sidebarFocusedIndex === 5 ? 'ring-2 ring-zinc-500' : ''"
+        :class="sidebarFocusedIndex === 5 ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
       >
         <select
           ref="sortSelectRef"
           :value="sortOption"
           @change="emit('update:sortOption', ($event.target as HTMLSelectElement).value as SortOption)"
           @blur="emit('inputBlur')"
-          class="w-full px-2 py-1.5 text-sm bg-zinc-900 text-zinc-300 rounded-md border border-zinc-700
-                 focus:outline-none hover:bg-zinc-800 hover:text-white cursor-pointer transition-colors"
+          class="w-full px-2 py-1.5 text-sm bg-white text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 rounded-md border border-zinc-200 dark:border-zinc-700
+                 focus:outline-none hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
         >
           <option value="alpha">A – Z</option>
           <option value="recentlyAdded">Recently Added</option>
@@ -125,9 +125,9 @@ defineExpose({ focusSearch, focusSort, blurActive });
     <button
       @click="emit('addGame')"
       class="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-md
-             border border-zinc-700 text-zinc-300 text-sm font-medium
-             hover:bg-zinc-800 hover:text-white transition-colors"
-      :class="sidebarFocusedIndex === 6 ? 'ring-2 ring-zinc-500' : ''"
+             border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 text-sm font-medium
+             hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-colors"
+      :class="sidebarFocusedIndex === 6 ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
     >
       <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -139,9 +139,9 @@ defineExpose({ focusSearch, focusSort, blurActive });
     <button
       @click="emit('openSettings')"
       class="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-md
-             text-zinc-500 text-sm font-medium
-             hover:bg-zinc-900 hover:text-zinc-300 transition-colors"
-      :class="sidebarFocusedIndex === 7 ? 'ring-2 ring-zinc-500 text-zinc-300' : ''"
+             text-zinc-500 dark:text-zinc-500 text-sm font-medium
+             hover:bg-zinc-200 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-300 transition-colors"
+      :class="sidebarFocusedIndex === 7 ? 'ring-2 ring-zinc-400 dark:ring-zinc-500 text-zinc-900 dark:text-zinc-300' : ''"
     >
       <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

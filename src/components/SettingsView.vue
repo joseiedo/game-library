@@ -7,20 +7,24 @@ export interface IgnoredGameInfo {
 
 defineProps<{
   autostartEnabled: boolean;
+  theme: "system" | "light" | "dark";
   ignoredGames: IgnoredGameInfo[];
   checkingForUpdates: boolean;
   /**
    * Controller focus index across all settings rows:
    *   -1                      = no focus (sidebar is focused)
    *    0                      = autostart row
-   *    1 .. ignoredGames.length = ignored-game rows
-   *    ignoredGames.length + 1 = "Add to ignore list" button
+   *    1                      = theme row
+   *    2 .. ignoredGames.length + 1 = ignored-game rows
+   *    ignoredGames.length + 2 = "Add to ignore list" button
+   *    ignoredGames.length + 3 = check-for-updates button
    */
   focusedIndex: number;
 }>();
 
 const emit = defineEmits<{
   toggleAutostart: [];
+  setTheme: [theme: "system" | "light" | "dark"];
   removeIgnored: [key: string];
   openIgnorePicker: [];
   checkForUpdates: [];
@@ -36,27 +40,27 @@ const PLATFORM_LABEL: Record<string, string> = {
 <template>
   <div class="max-w-lg">
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-sm font-medium text-zinc-400">Settings</h1>
+      <h1 class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Settings</h1>
     </div>
 
     <!-- General section -->
     <div class="flex flex-col gap-4 mb-8">
-      <p class="text-xs text-zinc-500 font-medium uppercase tracking-wider">General</p>
+      <p class="text-xs text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-wider">General</p>
 
       <!-- Autostart toggle -->
       <div
-        class="flex items-center justify-between px-4 py-3 rounded-md bg-zinc-900 border transition-colors cursor-pointer"
-        :class="focusedIndex === 0 ? 'border-zinc-500 ring-2 ring-zinc-500' : 'border-zinc-800'"
+        class="flex items-center justify-between px-4 py-3 rounded-md bg-white border dark:bg-zinc-900 transition-colors cursor-pointer"
+        :class="focusedIndex === 0 ? 'border-zinc-400 ring-2 ring-zinc-400 dark:border-zinc-500 dark:ring-2 dark:ring-zinc-500' : 'border-zinc-200 dark:border-zinc-800'"
         @click="emit('toggleAutostart')"
       >
         <div>
-          <p class="text-sm font-medium text-white">Launch at startup</p>
+          <p class="text-sm font-medium text-zinc-900 dark:text-white">Launch at startup</p>
           <p class="text-xs text-zinc-500 mt-0.5">Start Game Library automatically when you log in</p>
         </div>
 
         <button
           class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none"
-          :class="autostartEnabled ? 'bg-zinc-300' : 'bg-zinc-700'"
+          :class="autostartEnabled ? 'bg-zinc-400 dark:bg-zinc-300' : 'bg-zinc-200 dark:bg-zinc-700'"
           tabindex="-1"
           @click.stop="emit('toggleAutostart')"
         >
@@ -66,12 +70,42 @@ const PLATFORM_LABEL: Record<string, string> = {
           />
         </button>
       </div>
+
+      <!-- Theme selection -->
+      <div
+        class="flex items-center justify-between px-4 py-3 rounded-md bg-white border dark:bg-zinc-900 transition-colors cursor-pointer"
+        :class="focusedIndex === 1 ? 'border-zinc-400 ring-2 ring-zinc-400 dark:border-zinc-500 dark:ring-2 dark:ring-zinc-500' : 'border-zinc-200 dark:border-zinc-800'"
+        @click="() => {
+          const themes: Array<'system' | 'light' | 'dark'> = ['system', 'light', 'dark'];
+          const currentIdx = themes.indexOf(theme);
+          emit('setTheme', themes[(currentIdx + 1) % themes.length]);
+        }"
+      >
+        <div>
+          <p class="text-sm font-medium text-zinc-900 dark:text-white">Theme</p>
+          <p class="text-xs text-zinc-500 mt-0.5">Adjust appearance: {{ theme.charAt(0).toUpperCase() + theme.slice(1) }}</p>
+        </div>
+
+        <div class="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-md shrink-0">
+          <button
+            v-for="t in (['system', 'light', 'dark'] as const)"
+            :key="t"
+            @click.stop="emit('setTheme', t)"
+            class="px-2.5 py-1 text-[10px] font-semibold rounded transition-colors"
+            :class="theme === t
+              ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm'
+              : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'"
+          >
+            {{ t.charAt(0).toUpperCase() + t.slice(1) }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Ignored games section -->
     <div class="flex flex-col gap-3">
-      <p class="text-xs text-zinc-500 font-medium uppercase tracking-wider">Ignored Games</p>
-      <p class="text-xs text-zinc-600 -mt-1">
+      <p class="text-xs text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-wider">Ignored Games</p>
+      <p class="text-xs text-zinc-500 dark:text-zinc-600 -mt-1">
         These games are hidden from your library.
       </p>
 
@@ -80,17 +114,17 @@ const PLATFORM_LABEL: Record<string, string> = {
         <div
           v-for="(game, idx) in ignoredGames"
           :key="game.key"
-          class="flex items-center justify-between px-3 py-2 rounded-md bg-zinc-900 border transition-colors"
-          :class="focusedIndex === idx + 1 ? 'border-zinc-500 ring-2 ring-zinc-500' : 'border-zinc-800'"
+          class="flex items-center justify-between px-3 py-2 rounded-md bg-white border dark:bg-zinc-900 transition-colors"
+          :class="focusedIndex === idx + 2 ? 'border-zinc-400 ring-2 ring-zinc-400 dark:border-zinc-500 dark:ring-2 dark:ring-zinc-500' : 'border-zinc-200 dark:border-zinc-800'"
         >
           <div class="flex items-center gap-2 min-w-0">
-            <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-700 text-zinc-400 shrink-0">
+            <span class="text-xs px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 shrink-0">
               {{ PLATFORM_LABEL[game.platform] ?? game.platform }}
             </span>
-            <span class="text-sm text-zinc-300 truncate">{{ game.title }}</span>
+            <span class="text-sm text-zinc-700 dark:text-zinc-300 truncate">{{ game.title }}</span>
           </div>
           <button
-            class="ml-3 shrink-0 text-zinc-600 hover:text-zinc-300 transition-colors"
+            class="ml-3 shrink-0 text-zinc-400 hover:text-zinc-900 dark:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
             tabindex="-1"
             title="Remove from ignore list"
             @click="emit('removeIgnored', game.key)"
@@ -102,14 +136,14 @@ const PLATFORM_LABEL: Record<string, string> = {
         </div>
       </div>
 
-      <p v-else class="text-xs text-zinc-600 italic">No games are currently ignored.</p>
+      <p v-else class="text-xs text-zinc-500 dark:text-zinc-600 italic">No games are currently ignored.</p>
 
       <!-- Add to ignore list button -->
       <button
         class="flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors w-fit"
-        :class="focusedIndex === ignoredGames.length + 1
-          ? 'border-zinc-500 ring-2 ring-zinc-500 text-zinc-200 bg-zinc-900'
-          : 'border-zinc-700 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'"
+        :class="focusedIndex === ignoredGames.length + 2
+          ? 'border-zinc-400 ring-2 ring-zinc-400 text-zinc-900 bg-zinc-50 dark:border-zinc-500 dark:ring-2 dark:ring-zinc-500 dark:text-zinc-200 dark:bg-zinc-900'
+          : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200'"
         @click="emit('openIgnorePicker')"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -121,13 +155,13 @@ const PLATFORM_LABEL: Record<string, string> = {
 
     <!-- Updates section -->
     <div class="flex flex-col gap-3 mt-8">
-      <p class="text-xs text-zinc-500 font-medium uppercase tracking-wider">Updates</p>
+      <p class="text-xs text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-wider">Updates</p>
 
       <button
         class="flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors w-fit disabled:opacity-50 disabled:cursor-not-allowed"
-        :class="focusedIndex === ignoredGames.length + 2
-          ? 'border-zinc-500 ring-2 ring-zinc-500 text-zinc-200 bg-zinc-900'
-          : 'border-zinc-700 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'"
+        :class="focusedIndex === ignoredGames.length + 3
+          ? 'border-zinc-400 ring-2 ring-zinc-400 text-zinc-900 bg-zinc-50 dark:border-zinc-500 dark:ring-2 dark:ring-zinc-500 dark:text-zinc-200 dark:bg-zinc-900'
+          : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200'"
         :disabled="checkingForUpdates"
         @click="emit('checkForUpdates')"
       >
@@ -148,9 +182,9 @@ const PLATFORM_LABEL: Record<string, string> = {
     </div>
 
     <!-- Controller hint -->
-    <p class="mt-10 text-xs text-zinc-600">
-      Press <kbd class="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">B</kbd>
-      or <kbd class="px-1 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">Esc</kbd>
+    <p class="mt-10 text-xs text-zinc-500 dark:text-zinc-600">
+      Press <kbd class="px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono">B</kbd>
+      or <kbd class="px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono">Esc</kbd>
       to return to the library
     </p>
   </div>

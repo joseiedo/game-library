@@ -12,15 +12,27 @@ pub enum SettingsError {
 }
 
 /// Serializable payload — separate from Settings so `path` is never written to disk.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Theme {
+    #[default]
+    System,
+    Light,
+    Dark,
+}
+
 #[derive(Serialize, Deserialize, Default)]
 struct SettingsData {
     #[serde(default)]
     ignored_game_keys: HashSet<String>,
+    #[serde(default)]
+    theme: Theme,
 }
 
 pub struct Settings {
     path: PathBuf,
     ignored_game_keys: HashSet<String>,
+    theme: Theme,
 }
 
 impl Settings {
@@ -35,11 +47,21 @@ impl Settings {
         Ok(Self {
             path,
             ignored_game_keys: data.ignored_game_keys,
+            theme: data.theme,
         })
     }
 
     pub fn ignored_game_keys(&self) -> &HashSet<String> {
         &self.ignored_game_keys
+    }
+
+    pub fn theme(&self) -> Theme {
+        self.theme
+    }
+
+    pub fn set_theme(&mut self, theme: Theme) -> Result<(), SettingsError> {
+        self.theme = theme;
+        self.persist()
     }
 
     pub fn add_ignored(&mut self, key: String) -> Result<(), SettingsError> {
@@ -58,6 +80,7 @@ impl Settings {
         }
         let data = SettingsData {
             ignored_game_keys: self.ignored_game_keys.clone(),
+            theme: self.theme,
         };
         std::fs::write(&self.path, serde_json::to_string_pretty(&data)?)?;
         Ok(())

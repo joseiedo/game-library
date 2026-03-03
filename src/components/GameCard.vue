@@ -62,16 +62,16 @@ onUnmounted(() => {
     role="button"
     :aria-label="`Launch ${game.title}`"
     class="group relative flex flex-col rounded-md overflow-hidden cursor-pointer select-none
-           bg-zinc-900 border border-zinc-800 transition-all duration-150
-           hover:border-zinc-600
+           bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 transition-all duration-150
+           hover:border-zinc-400 dark:hover:border-zinc-600
            focus:outline-none"
-    :class="focused ? 'ring-2 ring-zinc-500 border-zinc-600' : ''"
+    :class="focused ? 'ring-2 ring-zinc-400 dark:ring-zinc-500 border-zinc-400 dark:border-zinc-600' : ''"
     @click="emit('launch')"
     @keydown="onKeyDown"
     @focus="emit('focus')"
   >
     <!-- Cover art -->
-    <div class="aspect-[2/3] w-full bg-zinc-800 overflow-visible">
+    <div class="aspect-[2/3] w-full bg-zinc-100 dark:bg-zinc-800 overflow-visible">
       <img
         v-if="game.coverImage"
         :src="game.coverImage"
@@ -81,7 +81,7 @@ onUnmounted(() => {
       />
       <div
         v-else
-        class="w-full h-full flex items-center justify-center text-zinc-700"
+        class="w-full h-full flex items-center justify-center text-zinc-400 dark:text-zinc-700"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
@@ -97,8 +97,8 @@ onUnmounted(() => {
       >
         <button
           @click.stop="toggleMenu"
-          class="p-1 rounded-md bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white
-                 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-150"
+          class="p-1 rounded-md bg-white/90 dark:bg-zinc-900/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white
+                 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-150 shadow-sm"
           :class="focused ? 'opacity-100' : ''"
           aria-label="Game options"
         >
@@ -110,11 +110,11 @@ onUnmounted(() => {
         <!-- Dropdown menu -->
         <div
           v-if="showMenu"
-          class="absolute top-full right-0 mt-1 w-28 bg-zinc-800 rounded-md shadow-lg border border-zinc-700 py-1 z-10"
+          class="absolute top-full right-0 mt-1 w-28 bg-white dark:bg-zinc-800 rounded-md shadow-lg border border-zinc-200 dark:border-zinc-700 py-1 z-10"
         >
           <button
             @click="handleEdit"
-            class="w-full px-3 py-2 text-left text-sm text-white hover:bg-zinc-700 transition-colors flex items-center gap-2"
+            class="w-full px-3 py-2 text-left text-sm text-zinc-700 dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -123,7 +123,7 @@ onUnmounted(() => {
           </button>
           <button
             @click="handleDelete"
-            class="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-zinc-700 transition-colors flex items-center gap-2"
+            class="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -135,10 +135,10 @@ onUnmounted(() => {
     </div>
 
     <!-- Bottom bar -->
-    <div class="px-2.5 py-2 flex flex-col gap-1 border-t border-zinc-800">
-      <p class="text-white text-xs font-medium leading-tight line-clamp-2">{{ game.title }}</p>
+    <div class="px-2.5 py-2 flex flex-col gap-1 border-t border-zinc-100 dark:border-zinc-800">
+      <p class="text-zinc-900 dark:text-white text-xs font-medium leading-tight line-clamp-2">{{ game.title }}</p>
       <span
-        class="self-start text-[10px] font-medium px-1.5 py-0.5 rounded-sm text-zinc-400 bg-zinc-800"
+        class="self-start text-[10px] font-medium px-1.5 py-0.5 rounded-sm text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800"
       >
         {{ game.platform === "steam" ? "Steam" : game.platform === "epic" ? "Epic" : "Custom" }}
       </span>

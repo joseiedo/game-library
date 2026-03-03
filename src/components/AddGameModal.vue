@@ -246,13 +246,13 @@ onUnmounted(() => {
     @mousedown="onBackdropMouseDown"
     @mouseup="onBackdropMouseUp"
   >
-    <div class="w-full max-w-md bg-zinc-950 rounded-lg shadow-2xl border border-zinc-800 p-5">
+    <div class="w-full max-w-md bg-white dark:bg-zinc-950 rounded-lg shadow-2xl border border-zinc-200 dark:border-zinc-800 p-5">
 
       <div class="flex items-center justify-between mb-5">
-        <h2 class="text-white text-sm font-semibold">{{ isEdit ? "Edit Game" : "Add Custom Game" }}</h2>
+        <h2 class="text-zinc-900 dark:text-white text-sm font-semibold">{{ isEdit ? "Edit Game" : "Add Custom Game" }}</h2>
         <button
           @click="emit('close')"
-          class="text-zinc-500 hover:text-white transition-colors"
+          class="text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white transition-colors"
           aria-label="Close"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -265,18 +265,18 @@ onUnmounted(() => {
 
         <!-- Title -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs text-zinc-400 font-medium">
-            Title <span class="text-zinc-600">*</span>
+          <label class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+            Title <span class="text-zinc-300 dark:text-zinc-600">*</span>
           </label>
           <input
             ref="titleRef"
             v-model="form.title"
             type="text"
             placeholder="e.g. Hollow Knight"
-            class="w-full px-3 py-1.5 bg-zinc-900 text-white text-sm rounded-md border border-zinc-800
-                   focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600
-                   placeholder-zinc-600 transition-colors"
-            :class="FORM_ITEMS[formFocusedIndex] === 'title' ? 'ring-2 ring-zinc-500' : ''"
+            class="w-full px-3 py-1.5 bg-zinc-50 text-zinc-900 text-sm rounded-md border border-zinc-200 dark:bg-zinc-900 dark:text-white dark:border-zinc-800
+                   focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600
+                   placeholder-zinc-400 dark:placeholder-zinc-600 transition-colors"
+            :class="FORM_ITEMS[formFocusedIndex] === 'title' ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
             @focus="formInputActive = true; formFocusedIndex = FORM_ITEMS.indexOf('title')"
             @blur="formInputActive = false"
           />
@@ -284,8 +284,8 @@ onUnmounted(() => {
 
         <!-- Executable -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs text-zinc-400 font-medium">
-            Executable <span class="text-zinc-600">*</span>
+          <label class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+            Executable <span class="text-zinc-300 dark:text-zinc-600">*</span>
           </label>
           <div class="flex gap-2">
             <input
@@ -293,10 +293,10 @@ onUnmounted(() => {
               v-model="form.executable"
               type="text"
               placeholder="Path to executable or .app bundle"
-              class="flex-1 min-w-0 px-3 py-1.5 bg-zinc-900 text-white text-sm rounded-md border border-zinc-800
-                     focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600
-                     placeholder-zinc-600 transition-colors"
-            :class="FORM_ITEMS[formFocusedIndex] === 'executable' ? 'ring-2 ring-zinc-500' : ''"
+              class="flex-1 min-w-0 px-3 py-1.5 bg-zinc-50 text-zinc-900 text-sm rounded-md border border-zinc-200 dark:bg-zinc-900 dark:text-white dark:border-zinc-800
+                     focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600
+                     placeholder-zinc-400 dark:placeholder-zinc-600 transition-colors"
+            :class="FORM_ITEMS[formFocusedIndex] === 'executable' ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
             @focus="formInputActive = true; formFocusedIndex = FORM_ITEMS.indexOf('executable')"
               @blur="formInputActive = false"
             />
@@ -304,9 +304,9 @@ onUnmounted(() => {
               ref="browseExecRef"
               type="button"
               @click="explorerMode = 'executable'"
-              class="shrink-0 px-3 py-1.5 text-sm rounded-md border border-zinc-700
-                     text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
-              :class="FORM_ITEMS[formFocusedIndex] === 'browse-executable' ? 'ring-2 ring-zinc-500' : ''"
+              class="shrink-0 px-3 py-1.5 text-sm rounded-md border border-zinc-200 dark:border-zinc-700
+                     text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-colors"
+              :class="FORM_ITEMS[formFocusedIndex] === 'browse-executable' ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
               title="Browse"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -319,17 +319,17 @@ onUnmounted(() => {
 
         <!-- Cover image -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs text-zinc-400 font-medium">Cover image</label>
+          <label class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Cover image</label>
           <div class="flex gap-2">
             <input
               ref="coverImageRef"
               v-model="form.coverImage"
               type="text"
               placeholder="Path to image (optional)"
-              class="flex-1 min-w-0 px-3 py-1.5 bg-zinc-900 text-white text-sm rounded-md border border-zinc-800
-                     focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600
-                     placeholder-zinc-600 transition-colors"
-              :class="FORM_ITEMS[formFocusedIndex] === 'coverImage' ? 'ring-2 ring-zinc-500' : ''"
+              class="flex-1 min-w-0 px-3 py-1.5 bg-zinc-50 text-zinc-900 text-sm rounded-md border border-zinc-200 dark:bg-zinc-900 dark:text-white dark:border-zinc-800
+                     focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600
+                     placeholder-zinc-400 dark:placeholder-zinc-600 transition-colors"
+              :class="FORM_ITEMS[formFocusedIndex] === 'coverImage' ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
               @focus="formInputActive = true; formFocusedIndex = FORM_ITEMS.indexOf('coverImage')"
               @blur="formInputActive = false"
             />
@@ -337,9 +337,9 @@ onUnmounted(() => {
               ref="browseCoverRef"
               type="button"
               @click="explorerMode = 'cover'"
-              class="shrink-0 px-3 py-1.5 text-sm rounded-md border border-zinc-700
-                     text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
-              :class="FORM_ITEMS[formFocusedIndex] === 'browse-cover' ? 'ring-2 ring-zinc-500' : ''"
+              class="shrink-0 px-3 py-1.5 text-sm rounded-md border border-zinc-200 dark:border-zinc-700
+                     text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-colors"
+              :class="FORM_ITEMS[formFocusedIndex] === 'browse-cover' ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
               title="Browse"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -353,16 +353,16 @@ onUnmounted(() => {
 
         <!-- Tags -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs text-zinc-400 font-medium">Tags</label>
+          <label class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Tags</label>
           <input
             ref="tagsRef"
             v-model="form.tags"
             type="text"
             placeholder="rpg, indie, metroidvania (comma-separated)"
-            class="w-full px-3 py-1.5 bg-zinc-900 text-white text-sm rounded-md border border-zinc-800
-                   focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600
-                   placeholder-zinc-600 transition-colors"
-            :class="FORM_ITEMS[formFocusedIndex] === 'tags' ? 'ring-2 ring-zinc-500' : ''"
+            class="w-full px-3 py-1.5 bg-zinc-50 text-zinc-900 text-sm rounded-md border border-zinc-200 dark:bg-zinc-900 dark:text-white dark:border-zinc-800
+                   focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600
+                   placeholder-zinc-400 dark:placeholder-zinc-600 transition-colors"
+            :class="FORM_ITEMS[formFocusedIndex] === 'tags' ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
             @focus="formInputActive = true; formFocusedIndex = FORM_ITEMS.indexOf('tags')"
             @blur="formInputActive = false"
           />
@@ -370,31 +370,31 @@ onUnmounted(() => {
 
         <!-- Notes -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs text-zinc-400 font-medium">Notes</label>
+          <label class="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Notes</label>
           <textarea
             ref="notesRef"
             v-model="form.notes"
             rows="2"
             placeholder="Optional notes…"
-            class="w-full px-3 py-1.5 bg-zinc-900 text-white text-sm rounded-md border border-zinc-800
-                   focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600
-                   placeholder-zinc-600 resize-none transition-colors"
-            :class="FORM_ITEMS[formFocusedIndex] === 'notes' ? 'ring-2 ring-zinc-500' : ''"
+            class="w-full px-3 py-1.5 bg-zinc-50 text-zinc-900 text-sm rounded-md border border-zinc-200 dark:bg-zinc-900 dark:text-white dark:border-zinc-800
+                   focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600
+                   placeholder-zinc-400 dark:placeholder-zinc-600 resize-none transition-colors"
+            :class="FORM_ITEMS[formFocusedIndex] === 'notes' ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
             @focus="formInputActive = true; formFocusedIndex = FORM_ITEMS.indexOf('notes')"
             @blur="formInputActive = false"
           />
         </div>
 
-        <p v-if="form.error" class="text-red-400 text-xs">{{ form.error }}</p>
+        <p v-if="form.error" class="text-red-500 dark:text-red-400 text-xs">{{ form.error }}</p>
 
         <div class="flex justify-end gap-2 pt-1">
           <button
             ref="cancelRef"
             type="button"
             @click="emit('close')"
-            class="px-4 py-1.5 text-sm text-zinc-400 hover:text-white rounded-md
-                   border border-zinc-700 hover:bg-zinc-800 transition-colors"
-            :class="FORM_ITEMS[formFocusedIndex] === 'cancel' ? 'ring-2 ring-zinc-500' : ''"
+            class="px-4 py-1.5 text-sm text-zinc-500 hover:text-zinc-900 rounded-md
+                   border border-zinc-200 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-white dark:border-zinc-700 dark:hover:bg-zinc-800 transition-colors"
+            :class="FORM_ITEMS[formFocusedIndex] === 'cancel' ? 'ring-2 ring-zinc-400 dark:ring-zinc-500' : ''"
           >
             Cancel
           </button>
@@ -402,10 +402,10 @@ onUnmounted(() => {
             ref="submitRef"
             type="submit"
             :disabled="form.submitting"
-            class="px-4 py-1.5 text-sm font-medium bg-white text-zinc-950
-                   rounded-md hover:bg-zinc-100 transition-colors
+            class="px-4 py-1.5 text-sm font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-950
+                   rounded-md hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors
                    disabled:opacity-40 disabled:cursor-not-allowed"
-            :class="FORM_ITEMS[formFocusedIndex] === 'submit' ? 'ring-2 ring-zinc-500 ring-offset-1 ring-offset-zinc-950' : ''"
+            :class="FORM_ITEMS[formFocusedIndex] === 'submit' ? 'ring-2 ring-zinc-400 dark:ring-zinc-500 dark:ring-offset-1 dark:ring-offset-zinc-950' : ''"
           >
             {{ form.submitting ? (isEdit ? "Saving…" : "Adding…") : (isEdit ? "Save Changes" : "Add Game") }}
           </button>

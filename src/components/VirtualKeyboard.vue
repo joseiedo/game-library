@@ -110,7 +110,7 @@ function keyClass(rowIdx: number, colIdx: number, key: string): string {
   const isFocused = cursorRow.value === rowIdx && cursorCol.value === colIdx;
   const isShiftActive = key === "SHIFT" && shiftActive.value;
 
-  const base = "flex items-center justify-center rounded-md border text-xs font-medium transition-colors select-none cursor-pointer h-9";
+  const base = "flex items-center justify-center rounded-md border text-xs font-medium transition-all duration-150 select-none cursor-pointer h-9";
 
   const sizeClass =
     key === "SPACE"
@@ -120,10 +120,10 @@ function keyClass(rowIdx: number, colIdx: number, key: string): string {
         : "w-9";
 
   const colorClass = isFocused
-    ? "ring-2 ring-white bg-zinc-700 border-zinc-500 text-white"
+    ? "ring-2 ring-zinc-400 dark:ring-white bg-zinc-100 dark:bg-zinc-700 border-zinc-400 dark:border-zinc-500 text-zinc-900 dark:text-white"
     : isShiftActive
-      ? "bg-zinc-600 text-white border-zinc-500"
-      : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white";
+      ? "bg-zinc-200 dark:bg-zinc-600 text-zinc-900 dark:text-white border-zinc-400 dark:border-zinc-500"
+      : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white shadow-sm";
 
   return `${base} ${sizeClass} ${colorClass}`;
 }
@@ -146,10 +146,10 @@ onUnmounted(() => {
 
 <template>
   <div class="fixed bottom-0 inset-x-0 z-[70] flex justify-center pb-4 px-4">
-    <div class="w-full max-w-xl bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl p-3 flex flex-col gap-2">
+    <div class="w-full max-w-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl p-3 flex flex-col gap-2 transition-colors duration-200">
 
       <!-- Text preview bar -->
-      <div class="bg-zinc-900 border border-zinc-700 rounded-md px-3 py-1.5 font-mono text-sm text-white min-h-[2rem] flex items-center">
+      <div class="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-1.5 font-mono text-sm text-zinc-900 dark:text-white min-h-[2rem] flex items-center">
         <span>{{ modelValue }}</span>
         <span :class="showCursor ? 'opacity-100' : 'opacity-0'" class="ml-px transition-opacity">|</span>
       </div>
@@ -168,10 +168,10 @@ onUnmounted(() => {
       </div>
 
       <!-- Hint bar -->
-      <div class="flex items-center justify-center gap-4 text-zinc-600 text-[10px] pt-0.5">
-        <span><span class="text-zinc-400">A</span> = Type</span>
-        <span><span class="text-zinc-400">B</span> = Confirm</span>
-        <span><span class="text-zinc-400">↕↔</span> = Navigate</span>
+      <div class="flex items-center justify-center gap-4 text-zinc-400 dark:text-zinc-600 text-[10px] pt-0.5">
+        <span><span class="text-zinc-500 dark:text-zinc-400">A</span> = Type</span>
+        <span><span class="text-zinc-500 dark:text-zinc-400">B</span> = Confirm</span>
+        <span><span class="text-zinc-500 dark:text-zinc-400">↕↔</span> = Navigate</span>
       </div>
 
     </div>

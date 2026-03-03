@@ -32,6 +32,7 @@ const checkingForUpdates = ref(false);
 
 const activeTab = ref<"library" | "settings">("library");
 const autostartEnabled = ref(false);
+const theme = ref<"system" | "light" | "dark">("system");
 const ignoredKeys = ref<Set<string>>(new Set());
 const showIgnorePicker = ref(false);
 
@@ -93,8 +94,8 @@ const availableForIgnore = computed(() =>
   allGames.value.filter((g) => !ignoredKeys.value.has(g.key)),
 );
 
-// Settings rows: 0=autostart, 1..n=ignored game rows, n+1=add button, n+2=check-for-updates
-const settingsItemCount = computed(() => 3 + ignoredGamesInfo.value.length);
+// Settings rows: 0=autostart, 1=theme, 2..n+1=ignored game rows, n+2=add button, n+3=check-for-updates
+const settingsItemCount = computed(() => 4 + ignoredGamesInfo.value.length);
 
 // Keep focus in bounds when ignored-games list changes length.
 watch(settingsItemCount, (count) => {
@@ -136,6 +137,48 @@ async function loadGames() {
     loading.value = false;
   }
 }
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+
+async function loadTheme() {
+  try {
+    theme.value = await invoke<"system" | "light" | "dark">("get_theme");
+    updateThemeClass();
+  } catch (e) {
+    warn(`Could not load theme: ${e}`);
+  }
+}
+
+async function setTheme(next: "system" | "light" | "dark") {
+  try {
+    await invoke("set_theme", { theme: next });
+    theme.value = next;
+    updateThemeClass();
+    info(`Theme set to ${next}`);
+  } catch (e) {
+    logError(`Failed to set theme: ${e}`);
+    showNotification(String(e));
+  }
+}
+
+function updateThemeClass() {
+  const isDark =
+    theme.value === "dark" ||
+    (theme.value === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  if (isDark) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+}
+
+// Watch system theme changes if set to 'system'
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (theme.value === "system") {
+    updateThemeClass();
+  }
+});
 
 // ── Autostart ──────────────────────────────────────────────────────────────
 
@@ -378,13 +421,19 @@ function navigateSettings(action: GamepadAction) {
     case "a":
       if (settingsFocusedIndex.value === 0) {
         toggleAutostart();
+      } else if (settingsFocusedIndex.value === 1) {
+        // Cycle theme
+        const themes: Array<"system" | "light" | "dark"> = ["system", "light", "dark"];
+        const currentIdx = themes.indexOf(theme.value);
+        const next = themes[(currentIdx + 1) % themes.length];
+        setTheme(next);
       } else if (settingsFocusedIndex.value === itemCount - 2) {
         showIgnorePicker.value = true;
       } else if (settingsFocusedIndex.value === itemCount - 1) {
         checkForUpdates();
       } else {
         // Ignored game row — unignore it
-        const game = ignoredGamesInfo.value[settingsFocusedIndex.value - 1];
+        const game = ignoredGamesInfo.value[settingsFocusedIndex.value - 2];
         if (game) removeIgnoredGame(game.key);
       }
       break;
@@ -487,6 +536,7 @@ function onKeyDown(e: KeyboardEvent) {
       case "ArrowUp":    e.preventDefault(); navigateSettings("up");    break;
       case "ArrowLeft":  e.preventDefault(); navigateSettings("left");  break;
       case "Enter":      e.preventDefault(); navigateSettings("a");     break;
+      case " ":          e.preventDefault(); navigateSettings("a");     break;
       case "Escape":     navigateSettings("b"); break;
     }
     return;
@@ -618,6 +668,7 @@ onMounted(() => {
   loadGames();
   loadAutostart();
   loadIgnoredGames();
+  loadTheme();
   checkForUpdates(true);
   window.addEventListener("keydown", onKeyDown);
 });
@@ -628,7 +679,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex h-screen bg-zinc-950 text-white overflow-hidden">
+  <div class="flex h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-white overflow-hidden transition-colors duration-200">
     <Sidebar
       ref="sidebarRef"
       :search="search"
@@ -652,13 +703,13 @@ onUnmounted(() => {
       <Transition name="slide-down">
         <div
           v-if="notification"
-          class="flex items-start gap-3 mb-4 px-4 py-3 rounded-md text-sm border"
+          class="flex items-start gap-3 mb-4 px-4 py-3 rounded-md text-sm border shadow-sm"
           :class="notification.type === 'error'
-            ? 'bg-red-950/50 border-red-900 text-red-300'
-            : 'bg-zinc-900 border-zinc-700 text-zinc-300'"
+            ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-950/50 dark:border-red-900 dark:text-red-300'
+            : 'bg-white border-zinc-200 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-300'"
         >
           <span class="flex-1">{{ notification.message }}</span>
-          <button @click="notification = null" class="text-zinc-500 hover:text-white transition-colors">
+          <button @click="notification = null" class="text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -668,19 +719,19 @@ onUnmounted(() => {
 
       <!-- Loading -->
       <div v-if="loading" class="flex items-center justify-center h-full">
-        <svg class="animate-spin w-6 h-6 text-zinc-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg class="animate-spin w-6 h-6 text-zinc-300 dark:text-zinc-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
         </svg>
       </div>
 
       <!-- Error -->
-      <div v-else-if="loadError" class="flex flex-col items-center justify-center h-full gap-3 text-zinc-400">
-        <p class="text-sm font-medium text-white">Failed to load library</p>
-        <p class="text-sm text-zinc-500">{{ loadError }}</p>
+      <div v-else-if="loadError" class="flex flex-col items-center justify-center h-full gap-3 text-zinc-500 dark:text-zinc-400">
+        <p class="text-sm font-medium text-zinc-900 dark:text-white">Failed to load library</p>
+        <p class="text-sm text-zinc-400 dark:text-zinc-500">{{ loadError }}</p>
         <button
           @click="loadGames"
-          class="mt-2 px-4 py-2 text-sm rounded-md border border-zinc-700 hover:bg-zinc-800 transition-colors"
+          class="mt-2 px-4 py-2 text-sm rounded-md border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
         >
           Retry
         </button>
@@ -690,10 +741,12 @@ onUnmounted(() => {
       <SettingsView
         v-else-if="activeTab === 'settings'"
         :autostart-enabled="autostartEnabled"
+        :theme="theme"
         :ignored-games="ignoredGamesInfo"
         :focused-index="focusArea === 'settings' ? settingsFocusedIndex : -1"
         :checking-for-updates="checkingForUpdates"
         @toggle-autostart="toggleAutostart"
+        @set-theme="setTheme"
         @remove-ignored="removeIgnoredGame"
         @open-ignore-picker="showIgnorePicker = true"
         @check-for-updates="checkForUpdates"
@@ -702,10 +755,10 @@ onUnmounted(() => {
       <!-- Library header + grid -->
       <template v-else>
         <div class="flex items-center justify-between mb-6">
-          <h1 class="text-sm font-medium text-zinc-400">
+          <h1 class="text-sm font-medium text-zinc-500 dark:text-zinc-400">
             {{ platformFilter === "all" ? "All Games" : platformFilter === "steam" ? "Steam" : platformFilter === "epic" ? "Epic" : "Custom" }}
           </h1>
-          <span class="text-xs text-zinc-600">{{ filteredGames.length }} game{{ filteredGames.length !== 1 ? "s" : "" }}</span>
+          <span class="text-xs text-zinc-400 dark:text-zinc-600">{{ filteredGames.length }} game{{ filteredGames.length !== 1 ? "s" : "" }}</span>
         </div>
 
         <GameGrid
@@ -748,17 +801,17 @@ onUnmounted(() => {
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       @click.self="pendingDelete = null"
     >
-      <div class="w-full max-w-sm bg-zinc-950 rounded-lg shadow-2xl border border-zinc-800 p-5">
-        <h3 class="text-white text-sm font-semibold mb-2">Delete Game?</h3>
-        <p class="text-zinc-400 text-sm mb-4">
+      <div class="w-full max-w-sm bg-white dark:bg-zinc-950 rounded-lg shadow-2xl border border-zinc-200 dark:border-zinc-800 p-5">
+        <h3 class="text-zinc-900 dark:text-white text-sm font-semibold mb-2">Delete Game?</h3>
+        <p class="text-zinc-500 dark:text-zinc-400 text-sm mb-4">
           Are you sure you want to delete "{{ pendingDelete?.title }}"?
           This action cannot be undone.
         </p>
         <div class="flex justify-end gap-2">
           <button
             @click="pendingDelete = null"
-            class="px-4 py-1.5 text-sm text-zinc-400 hover:text-white rounded-md
-                   border border-zinc-700 hover:bg-zinc-800 transition-colors"
+            class="px-4 py-1.5 text-sm text-zinc-500 hover:text-zinc-900 rounded-md
+                   border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
           >
             Cancel
           </button>

@@ -9,7 +9,7 @@ mod updater;
 use epic::EpicGame;
 use launcher::LaunchTarget;
 use library::{CustomGame, Library};
-use settings::Settings;
+use settings::{Settings, Theme};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use steam::SteamGame;
@@ -251,6 +251,22 @@ fn remove_ignored_game(state: State<AppState>, key: String) -> Result<(), String
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn get_theme(state: State<AppState>) -> Theme {
+    state.settings.lock().unwrap().theme()
+}
+
+#[tauri::command]
+fn set_theme(state: State<AppState>, theme: Theme) -> Result<(), String> {
+    log::info!("Setting theme: {:?}", theme);
+    state
+        .settings
+        .lock()
+        .unwrap()
+        .set_theme(theme)
+        .map_err(|e| e.to_string())
+}
+
 // ---------------------------------------------------------------------------
 // Autostart commands
 // ---------------------------------------------------------------------------
@@ -341,6 +357,8 @@ pub fn run() {
             get_ignored_games,
             add_ignored_game,
             remove_ignored_game,
+            get_theme,
+            set_theme,
             updater::download_update,
         ])
         .run(tauri::generate_context!())

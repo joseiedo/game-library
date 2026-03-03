@@ -2,6 +2,8 @@
 
 A Tauri desktop application for managing and launching your personal game collection from a single place.
 
+<img width="3792" height="2091" alt="image" src="https://github.com/user-attachments/assets/0493f452-0a80-4c6c-88c5-d97d4e69d4e5" />
+
 ## Features
 
 - **Steam Integration** — auto-detects your local Steam installation and lists all installed games

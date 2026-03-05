@@ -37,13 +37,6 @@ impl LaunchTarget {
         Self::Executable { path: path.into() }
     }
 
-    /// Returns the Steam URI for a Steam target, or `None` for other targets.
-    pub fn steam_uri(&self) -> Option<String> {
-        match self {
-            Self::Steam { app_id } => Some(format!("steam://run/{}", app_id)),
-            _ => None,
-        }
-    }
 }
 
 /// Launches the given target. For Steam and Epic games this opens the appropriate URI;
@@ -94,44 +87,6 @@ pub fn spawn_executable(path: &str) -> Result<Option<std::process::Child>, Launc
     Ok(Some(Command::new(path).spawn()?))
 }
 
-/// Resolves the process name that the OS will report for the given executable path.
-///
-/// For macOS `.app` bundles, this inspects `Contents/MacOS/` to find the actual
-/// binary name (e.g. `"/Applications/Aseprite.app"` → `"aseprite"`).
-/// For plain executables on all platforms, this is simply the file name.
-pub fn resolve_process_name(exe_path: &str) -> String {
-    let path = Path::new(exe_path);
-
-    #[cfg(target_os = "macos")]
-    if exe_path.ends_with(".app") {
-        let macos_dir = path.join("Contents/MacOS");
-        if let Ok(entries) = std::fs::read_dir(&macos_dir) {
-            // Return the first non-hidden, non-directory entry
-            let name = entries
-                .flatten()
-                .filter(|e| {
-                    let name = e.file_name().to_string_lossy().to_string();
-                    !name.starts_with('.') && e.file_type().map(|t| !t.is_dir()).unwrap_or(false)
-                })
-                .next()
-                .map(|e| e.file_name().to_string_lossy().to_string());
-
-            if let Some(n) = name {
-                return n;
-            }
-        }
-        // Fallback: bundle name without .app extension
-        return path
-            .file_stem()
-            .map(|s| s.to_string_lossy().to_string())
-            .unwrap_or_default();
-    }
-
-    path.file_name()
-        .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_default()
-}
-
 /// Opens a URI using the platform's default handler.
 fn open_uri(uri: &str) -> Result<(), LaunchError> {
     #[cfg(target_os = "macos")]
@@ -160,9 +115,8 @@ fn open_uri(uri: &str) -> Result<(), LaunchError> {
 mod tests {
     use super::*;
 
-    // --- EpicGame launch target (T017–T020) ---
+    // --- EpicGame launch target ---
 
-    /// T017: LaunchTarget::EpicGame stores the URI and launch() dispatches it.
     #[test]
     fn epic_game_target_stores_uri() {
         let uri = "com.epicgames.launcher://apps/ns%3Aid%3AFortnite?action=launch&silent=true";
@@ -175,25 +129,8 @@ mod tests {
         );
     }
 
-    /// T017 (dispatch): steam_uri() returns None for Epic targets (regression guard).
-    #[test]
-    fn steam_uri_none_for_epic_target() {
-        let target = LaunchTarget::epic_game("com.epicgames.launcher://apps/ns%3Aid%3AGame");
-        assert_eq!(target.steam_uri(), None);
-    }
+    // --- LaunchTarget ---
 
-    /// T018: All three params None → launch() errors with no-target message.
-    /// This is exercised at the lib.rs command level; here we confirm LaunchTarget
-    /// itself cannot be constructed ambiguously (the enum enforces one variant).
-
-    /// T019 (regression): Steam variant still builds and steam_uri() works.
-    #[test]
-    fn steam_regression_target_builds() {
-        let target = LaunchTarget::steam(440);
-        assert_eq!(target.steam_uri(), Some("steam://run/440".to_string()));
-    }
-
-    /// T020 (regression): Executable variant still builds correctly.
     #[test]
     fn executable_regression_target_builds() {
         let target = LaunchTarget::executable("/games/game.exe");
@@ -203,20 +140,6 @@ mod tests {
                 path: "/games/game.exe".to_string()
             }
         );
-    }
-
-    // --- LaunchTarget ---
-
-    #[test]
-    fn steam_uri_for_steam_target() {
-        let target = LaunchTarget::steam(440);
-        assert_eq!(target.steam_uri(), Some("steam://run/440".to_string()));
-    }
-
-    #[test]
-    fn steam_uri_none_for_executable_target() {
-        let target = LaunchTarget::executable("/usr/games/example");
-        assert_eq!(target.steam_uri(), None);
     }
 
     #[test]
@@ -271,40 +194,4 @@ mod tests {
         assert!(!status.success());
     }
 
-    // --- resolve_process_name ---
-
-    #[test]
-    fn process_name_from_plain_binary() {
-        assert_eq!(resolve_process_name("/usr/bin/aseprite"), "aseprite");
-    }
-
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn process_name_from_windows_exe() {
-        assert_eq!(
-            resolve_process_name("C:\\Games\\aseprite.exe"),
-            "aseprite.exe"
-        );
-    }
-
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn process_name_from_app_bundle_falls_back_to_stem_when_no_contents() {
-        // A path that ends in .app but has no Contents/MacOS — falls back to bundle stem
-        assert_eq!(
-            resolve_process_name("/Applications/FakeGame.app"),
-            "FakeGame"
-        );
-    }
-
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn process_name_from_real_app_bundle_if_present() {
-        // Only runs when Aseprite (or another .app) is actually installed
-        let path = "/Applications/Aseprite.app";
-        if Path::new(path).exists() {
-            let name = resolve_process_name(path);
-            assert!(!name.is_empty(), "should return a non-empty process name");
-        }
-    }
 }

@@ -102,6 +102,7 @@ impl Library {
         Ok(&self.games[index])
     }
 
+    #[allow(dead_code)]
     pub fn get(&self, id: &str) -> Option<&CustomGame> {
         self.games.iter().find(|g| g.id == id)
     }

@@ -497,6 +497,17 @@ mod tests {
             is_shortcut: false,
         };
         assert_eq!(game.launch_uri(), "steam://run/440");
-        assert_eq!(game.launch_uri(), "steam://rungameid/...");
+    }
+
+    #[test]
+    fn launch_uri_format_shortcut() {
+        let game = SteamGame {
+            app_id: 440,
+            name: "Team Fortress 2".to_string(),
+            install_dir: PathBuf::from("/fake"),
+            is_shortcut: true,
+        };
+        let expected_id = (440u64 << 32) | 0x02000000u64;
+        assert_eq!(game.launch_uri(), format!("steam://rungameid/{}", expected_id));
     }
 }

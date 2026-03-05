@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "vitest",
+    "test:backend": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "test:all": "npm test -- --run && npm run test:backend"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -18,11 +21,14 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.4.6",
     "autoprefixer": "^10.4.24",
+    "jsdom": "^26.1.0",
     "postcss": "^8.5.6",
     "tailwindcss": "3",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
+    "vitest": "^3.2.4",
     "vue-tsc": "^2.1.10"
   }
 }

@@ -22,20 +22,8 @@ pub struct EpicGame {
     pub cover_image: Option<PathBuf>,
 }
 
-impl EpicGame {
-    /// Constructs the Epic Games Launcher URI for this game.
-    pub fn launch_uri(&self) -> String {
-        format!(
-            "com.epicgames.launcher://apps/{}%3A{}%3A{}?action=launch&silent=true",
-            self.catalog_namespace, self.catalog_item_id, self.app_name
-        )
-    }
-}
-
 #[derive(Debug, Error)]
 pub enum EpicError {
-    #[error("Epic Games Launcher not found")]
-    NotFound,
     #[error("Failed to read Epic manifest directory: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -295,22 +283,4 @@ mod tests {
         fs::remove_dir_all(&manifest_dir).ok();
     }
 
-    // ------------------------------------------------------------------ launch_uri helper
-    #[test]
-    fn launch_uri_format() {
-        let dir = make_temp_dir("uri");
-        let game = EpicGame {
-            app_name: "Fortnite".to_string(),
-            display_name: "Fortnite".to_string(),
-            install_location: dir.clone(),
-            catalog_namespace: "fn".to_string(),
-            catalog_item_id: "4fe75bbc5a674f4f9b356b5c90567da5".to_string(),
-            cover_image: None,
-        };
-        assert_eq!(
-            game.launch_uri(),
-            "com.epicgames.launcher://apps/fn%3A4fe75bbc5a674f4f9b356b5c90567da5%3AFortnite?action=launch&silent=true"
-        );
-        fs::remove_dir_all(&dir).ok();
-    }
 }

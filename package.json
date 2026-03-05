@@ -10,7 +10,7 @@
     "tauri": "tauri",
     "test": "vitest",
     "test:backend": "cargo test --manifest-path src-tauri/Cargo.toml",
-    "test:all": "npm test -- --run && npm run test:backend"
+    "test:all": "yarn test --run && yarn test:backend"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
